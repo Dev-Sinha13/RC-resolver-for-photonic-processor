@@ -3,14 +3,17 @@
 This project investigates causal restoration of noisy and missing nonlinear
 time-series data using a simulated, time-multiplexed photonic delay reservoir.
 
-The first milestone intentionally contains no reservoir implementation. It
-establishes the experimental foundation:
+The current foundation intentionally contains no reservoir implementation. It
+establishes:
 
 - reproducible Mackey–Glass signal generation;
 - chronological train/validation/test splitting;
 - Gaussian, impulse, and missing-interval corruption;
 - explicit observation masks for missing samples; and
-- unit tests for numerical and reproducibility guarantees.
+- variance-normalized restoration metrics;
+- causal identity and moving-average baselines; and
+- a reproducible Gaussian-denoising experiment with validation-only
+  hyperparameter selection.
 
 ## Current milestone
 
@@ -27,8 +30,17 @@ Then run the tests:
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-The next milestone will add causal classical baselines before implementing a
-digital echo-state network.
+Run the Gaussian baseline experiment from Python with:
+
+```python
+from rc_photonics import run_gaussian_baseline_experiment
+
+for result in run_gaussian_baseline_experiment():
+    print(result)
+```
+
+The next milestone will add mask-aware missing-value baselines before
+implementing a trainable autoregressive model and digital echo-state network.
 
 ## Experimental rule
 
