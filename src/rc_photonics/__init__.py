@@ -7,6 +7,10 @@ from rc_photonics.corruption import (
     mask_interval,
 )
 from rc_photonics.datasets import ChronologicalSplit, chronological_split
+from rc_photonics.metrics import (
+    mean_squared_error,
+    normalized_mean_squared_error,
+)
 from rc_photonics.signals import MackeyGlassParameters, generate_mackey_glass
 
 __all__ = [
@@ -18,4 +22,6 @@ __all__ = [
     "chronological_split",
     "generate_mackey_glass",
     "mask_interval",
+    "mean_squared_error",
+    "normalized_mean_squared_error",
 ]
