@@ -1,6 +1,7 @@
 import unittest
 
 from rc_photonics.experiments import (
+    run_impulse_baseline_experiment,
     run_gaussian_baseline_experiment,
     run_missing_gap_experiment,
 )
@@ -64,6 +65,22 @@ class GaussianBaselineExperimentTests(unittest.TestCase):
             with self.subTest(n_repeats=n_repeats):
                 with self.assertRaisesRegex(ValueError, "n_repeats"):
                     run_missing_gap_experiment(n_repeats=n_repeats)
+
+    def test_impulse_experiment_is_deterministic(self) -> None:
+        arguments = {
+            "n_samples": 1_000,
+            "impulse_probabilities": (0.05,),
+            "median_windows": (3, 5),
+            "current_regularizations": (0.0,),
+            "autoregressive_lags": (2, 5),
+            "autoregressive_regularizations": (1e-3,),
+        }
+
+        first = run_impulse_baseline_experiment(**arguments)
+        second = run_impulse_baseline_experiment(**arguments)
+
+        self.assertEqual(first, second)
+        self.assertGreaterEqual(first[0].median_nmse, 0.0)
 
 
 if __name__ == "__main__":

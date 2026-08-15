@@ -13,11 +13,12 @@ from rc_photonics.autoregression import (
 )
 from rc_photonics.baselines import (
     causal_masked_moving_average,
+    causal_median_filter,
     causal_moving_average,
     identity_restoration,
     last_observation_carried_forward,
 )
-from rc_photonics.corruption import add_gaussian_noise, mask_interval
+from rc_photonics.corruption import add_gaussian_noise, add_impulse_noise, mask_interval
 from rc_photonics.datasets import chronological_split
 from rc_photonics.metrics import mean_squared_error, normalized_mean_squared_error
 from rc_photonics.signals import generate_mackey_glass
@@ -52,6 +53,22 @@ class MissingGapResult:
     selected_ar_regularization: float
     carried_forward_nmse: float
     masked_moving_average_nmse: float
+    autoregressive_nmse: float
+
+
+@dataclass(frozen=True)
+class ImpulseBaselineResult:
+    """Test-set scores for one impulse-corruption probability."""
+
+    impulse_probability: float
+    impulse_magnitude: float
+    selected_median_window: int
+    selected_current_regularization: float
+    selected_ar_lags: int
+    selected_ar_regularization: float
+    identity_nmse: float
+    median_nmse: float
+    current_sample_nmse: float
     autoregressive_nmse: float
 
 
@@ -274,6 +291,154 @@ def run_gaussian_baseline_experiment(
             )
         )
 
+    return tuple(results)
+
+
+def run_impulse_baseline_experiment(
+    *,
+    n_samples: int = 6_000,
+    impulse_probabilities: Iterable[float] = (0.01, 0.05, 0.1, 0.2),
+    impulse_magnitude: float = 0.5,
+    median_windows: Iterable[int] = (3, 5, 9, 15),
+    current_regularizations: Iterable[float] = (0.0, 1e-3, 0.1, 1.0),
+    autoregressive_lags: Iterable[int] = (5, 20, 50, 100, 200),
+    autoregressive_regularizations: Iterable[float] = (1e-6, 1e-3, 0.1),
+    seed: int = 84,
+) -> tuple[ImpulseBaselineResult, ...]:
+    """Tune causal impulse-noise baselines and evaluate held-out data."""
+    probabilities = tuple(float(value) for value in impulse_probabilities)
+    if not probabilities or any(
+        not np.isfinite(value) or not 0.0 <= value <= 1.0
+        for value in probabilities
+    ):
+        raise ValueError("impulse probabilities must be finite and in [0, 1]")
+    if not np.isfinite(impulse_magnitude) or impulse_magnitude < 0.0:
+        raise ValueError("impulse_magnitude must be finite and non-negative")
+    windows = _positive_integer_candidates(median_windows, name="median_windows")
+    current_penalties = _regularization_candidates(
+        current_regularizations,
+        name="current_regularizations",
+    )
+    ar_lags = _positive_integer_candidates(
+        autoregressive_lags,
+        name="autoregressive_lags",
+    )
+    ar_penalties = _regularization_candidates(
+        autoregressive_regularizations,
+        name="autoregressive_regularizations",
+    )
+    evaluation_start = max(ar_lags)
+    split = chronological_split(generate_mackey_glass(n_samples))
+    results: list[ImpulseBaselineResult] = []
+
+    for index, probability in enumerate(probabilities):
+        train_observation = add_impulse_noise(
+            split.train,
+            probability=probability,
+            magnitude=impulse_magnitude,
+            seed=seed + 3 * index,
+        ).values
+        validation_observation = add_impulse_noise(
+            split.validation,
+            probability=probability,
+            magnitude=impulse_magnitude,
+            seed=seed + 3 * index + 1,
+        ).values
+        test_observation = add_impulse_noise(
+            split.test,
+            probability=probability,
+            magnitude=impulse_magnitude,
+            seed=seed + 3 * index + 2,
+        ).values
+        validation_target = split.validation[evaluation_start:]
+        test_target = split.test[evaluation_start:]
+
+        median_scores = {
+            window: normalized_mean_squared_error(
+                validation_target,
+                causal_median_filter(
+                    validation_observation,
+                    window_size=window,
+                )[evaluation_start:],
+            )
+            for window in windows
+        }
+        selected_window = min(
+            windows,
+            key=lambda window: (median_scores[window], window),
+        )
+        current_models = tuple(
+            fit_current_sample_ridge(
+                train_observation,
+                split.train,
+                regularization=penalty,
+            )
+            for penalty in current_penalties
+        )
+        selected_current = min(
+            current_models,
+            key=lambda model: (
+                normalized_mean_squared_error(
+                    validation_target,
+                    model.predict(validation_observation)[evaluation_start:],
+                ),
+                model.regularization,
+            ),
+        )
+        ar_models = _fit_ar_candidates(
+            train_observation,
+            split.train,
+            lags=ar_lags,
+            regularizations=ar_penalties,
+        )
+        selected_ar = min(
+            ar_models,
+            key=lambda model: (
+                normalized_mean_squared_error(
+                    validation_target,
+                    _aligned_ar_prediction(
+                        model,
+                        validation_observation,
+                        evaluation_start=evaluation_start,
+                    ),
+                ),
+                model.n_lags,
+                model.regularization,
+            ),
+        )
+        results.append(
+            ImpulseBaselineResult(
+                impulse_probability=probability,
+                impulse_magnitude=float(impulse_magnitude),
+                selected_median_window=selected_window,
+                selected_current_regularization=selected_current.regularization,
+                selected_ar_lags=selected_ar.n_lags,
+                selected_ar_regularization=selected_ar.regularization,
+                identity_nmse=normalized_mean_squared_error(
+                    test_target,
+                    test_observation[evaluation_start:],
+                ),
+                median_nmse=normalized_mean_squared_error(
+                    test_target,
+                    causal_median_filter(
+                        test_observation,
+                        window_size=selected_window,
+                    )[evaluation_start:],
+                ),
+                current_sample_nmse=normalized_mean_squared_error(
+                    test_target,
+                    selected_current.predict(test_observation)[evaluation_start:],
+                ),
+                autoregressive_nmse=normalized_mean_squared_error(
+                    test_target,
+                    _aligned_ar_prediction(
+                        selected_ar,
+                        test_observation,
+                        evaluation_start=evaluation_start,
+                    ),
+                ),
+            )
+        )
     return tuple(results)
 
 

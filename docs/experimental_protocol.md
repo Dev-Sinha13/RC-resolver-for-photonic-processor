@@ -1,54 +1,88 @@
-# Pre-reservoir experimental protocol
+# Experimental protocol
 
-This protocol is fixed before implementing either the digital echo-state
-network or the photonic delay reservoir. Both reservoir models must use the
-same data, splits, causal information, hyperparameter-selection rules, and
-metrics as the classical baselines.
+This protocol is shared by the classical baselines, digital echo-state
+network, and simulated photonic delay reservoir.
 
 ## Signal and partitions
 
-- Generate one deterministic 6,000-sample Mackey–Glass trajectory after the
-  configured transient washout.
+- Generate one deterministic 6,000-sample Mackey–Glass trajectory after its
+  transient washout.
 - Preserve temporal order with contiguous 60% training, 20% validation, and
   20% test partitions.
-- Fit model parameters on training data only.
-- Select hyperparameters using validation data only.
-- Evaluate the selected configuration once on the test partition.
+- Fit parameters using training data only.
+- Select candidates and ridge penalties using validation data only.
+- Evaluate the selected candidate on the test partition.
+- Use deterministic, independent corruption seeds for each partition.
+
+The real-sensor experiment applies the same 60/20/20 chronological split and
+computes standardization statistics from its training partition only.
 
 ## Causality rule
 
 An estimate at time `t` may depend only on observations at or before `t`.
-Autoregressive forecasts exclude the current observation and use samples
-strictly before `t`. During a missing interval, predicted values are fed back
-recursively without access to the clean target or future observations.
+Autoregressive forecasts exclude the current observation. During a missing
+interval, predictions are fed back recursively without access to the clean
+target or future observations. Reservoir inputs contain two channels:
+`[corrupted value, observation mask]`.
 
-## Gaussian-denoising task
+## Tasks
 
-- Add independent, deterministic Gaussian noise draws to the train,
-  validation, and test partitions.
-- Evaluate standard deviations `0.02`, `0.05`, `0.1`, and `0.2`.
-- Compare identity processing, current-sample ridge regression, causal moving
-  average, and lagged ridge autoregression.
-- Use the same evaluation start for every model, determined by the largest
-  autoregressive lag candidate.
-- Report variance-normalized test NMSE.
+### Gaussian denoising
 
-## Missing-interval task
+- Noise standard deviations: `0.02`, `0.05`, `0.1`, and `0.2`.
+- Baselines: identity, causal moving average, current-sample regression, and
+  lagged autoregression.
+- Reservoir target: the clean value at the current time.
 
-- Mask contiguous gaps of `5`, `10`, `20`, `40`, and `80` samples.
-- Evaluate multiple deterministic positions for each gap length.
-- Compare last observation carried forward, mask-aware causal moving average,
-  and recursive ridge autoregression.
-- Average error only over missing samples.
-- Normalize every gap MSE by the variance of the complete corresponding clean
-  split. This fixed denominator permits comparison across gap lengths.
+### Impulse denoising
 
-## Reservoir entry criteria
+- Impulse probabilities: `0.01`, `0.05`, `0.1`, and `0.2`.
+- Baselines: identity, causal median filter, and autoregression.
+- Impulse values and positions are independently seeded by partition.
 
-Reservoir implementation begins only after:
+### Missing-interval restoration
 
-- all baseline and experiment tests pass;
-- both benchmark runs are deterministic;
-- validation choices and test scores are separated;
-- all baselines pass explicit no-future-information tests; and
-- the benchmark command runs from a clean installation.
+- Gap lengths: `5`, `10`, `20`, `40`, and `80` samples.
+- Multiple deterministic positions are evaluated for each length.
+- Baselines: last observation carried forward, mask-aware causal moving
+  average, and recursive autoregression.
+- Reservoir readouts are trained on artificial missing positions so the target
+  cannot be solved by simply copying observed values.
+- Error is averaged only over missing samples.
+
+## Reservoir selection
+
+ESN candidates vary node count, spectral radius, leak rate, and input scaling.
+Photonic candidates vary virtual-node count, feedback gain, leak rate, input
+scaling, and phase bias. Both use the same ridge penalties. Complete fixed
+candidate spaces and seeds are stored in [`../configs/`](../configs/).
+
+Every candidate is reset before each state-collection pass. The initial state
+washout is excluded from fitting and scoring. The exact same selected readout
+is used when evaluating simulated photonic hardware impairment; it is not
+retrained to hide degradation.
+
+## Metrics
+
+The reported normalized mean squared error is
+
+```text
+NMSE = mean((target - prediction)^2) / variance(clean reference)
+```
+
+For Gaussian and impulse experiments, every model uses the same evaluation
+start and test-reference variance. For gaps, the numerator uses only missing
+positions while the denominator remains the variance of the complete clean
+split. This fixed denominator makes different gap lengths comparable.
+
+Lower is better. An NMSE of zero is perfect; a value around one is comparable
+to predicting the reference mean. NMSE is undefined for a constant reference,
+which the implementation rejects.
+
+## Reproducibility and interpretation
+
+All matrices, corruption, positions, and impairments are seeded. The checked-in
+results are deterministic single-seed benchmark values. The reporting module
+supports confidence intervals, but publication-grade claims should rerun the
+full experiment across multiple independent initialization and corruption
+seeds.
