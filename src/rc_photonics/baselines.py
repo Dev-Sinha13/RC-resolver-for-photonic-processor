@@ -67,6 +67,21 @@ def causal_moving_average(
     return np.asarray(window_sums / window_lengths, dtype=np.float64)
 
 
+def causal_median_filter(
+    signal: ArrayLike,
+    *,
+    window_size: int,
+) -> NDArray[np.float64]:
+    """Return a causal rolling median robust to isolated impulses."""
+    validated_window_size = _validate_window_size(window_size)
+    values = _as_signal(signal)
+    restored = np.empty_like(values)
+    for index in range(values.size):
+        start = max(0, index - validated_window_size + 1)
+        restored[index] = float(np.median(values[start : index + 1]))
+    return restored
+
+
 def last_observation_carried_forward(
     signal: ArrayLike,
     observation_mask: ArrayLike,

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rc-photonics"
-version = "0.1.0"
+version = "0.2.0"
 description = "Causal signal restoration with simulated photonic reservoir computing"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,6 +14,11 @@ dependencies = [
 
 [project.scripts]
 rc-photonics-baselines = "rc_photonics.experiments_cli:main"
+rc-photonics-esn = "rc_photonics.reservoir_cli:esn_main"
+rc-photonics-photonic = "rc_photonics.reservoir_cli:photonic_main"
+rc-photonics-robustness = "rc_photonics.reservoir_cli:robustness_main"
+rc-photonics-sensor = "rc_photonics.reservoir_cli:sensor_main"
+rc-photonics-figures = "rc_photonics.reservoir_cli:figures_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

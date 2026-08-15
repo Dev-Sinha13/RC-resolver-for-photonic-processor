@@ -4,6 +4,7 @@ import numpy as np
 
 from rc_photonics.baselines import (
     causal_masked_moving_average,
+    causal_median_filter,
     causal_moving_average,
     identity_restoration,
     last_observation_carried_forward,
@@ -37,6 +38,14 @@ class BaselineTests(unittest.TestCase):
             causal_moving_average(signal, window_size=1),
             signal,
         )
+
+    def test_causal_median_rejects_isolated_impulse(self) -> None:
+        restored = causal_median_filter(
+            [1.0, 1.0, 100.0, 1.0, 1.0],
+            window_size=3,
+        )
+
+        np.testing.assert_array_equal(restored, [1.0, 1.0, 1.0, 1.0, 1.0])
 
     def test_future_input_does_not_change_past_outputs(self) -> None:
         original = np.array([1.0, 2.0, 3.0, 4.0, 5.0])

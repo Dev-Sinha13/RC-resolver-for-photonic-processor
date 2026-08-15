@@ -1,0 +1,11 @@
+[fixed]
+input_dim = 2
+seed = 42
+
+[search]
+n_virtual_nodes = [50, 100]
+feedback_gain = [0.5, 0.8]
+leak_rate = [0.2, 0.5]
+input_scaling = [0.5, 1.0]
+phase_bias = [0.2, 0.7853981633974483]
+readout_regularization = [0.000001, 0.001, 0.1]

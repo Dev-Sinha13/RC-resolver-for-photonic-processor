@@ -38,3 +38,8 @@ jobs:
 
       - name: Run benchmark entry point
         run: rc-photonics-baselines
+
+      - name: Smoke-test reservoir package APIs
+        run: >-
+          python -c "from rc_photonics import EchoStateNetwork,
+          PhotonicDelayReservoir, RidgeReadout; print('reservoir APIs import')"
