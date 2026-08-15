@@ -2,7 +2,12 @@ import unittest
 
 import numpy as np
 
-from rc_photonics.baselines import causal_moving_average, identity_restoration
+from rc_photonics.baselines import (
+    causal_masked_moving_average,
+    causal_moving_average,
+    identity_restoration,
+    last_observation_carried_forward,
+)
 
 
 class BaselineTests(unittest.TestCase):
@@ -67,6 +72,42 @@ class BaselineTests(unittest.TestCase):
                     identity_restoration(signal)
                 with self.assertRaises(ValueError):
                     causal_moving_average(signal, window_size=2)
+
+    def test_last_observation_is_carried_through_gap(self) -> None:
+        restored = last_observation_carried_forward(
+            [1.0, 2.0, 0.0, 0.0, 5.0],
+            [True, True, False, False, True],
+        )
+
+        np.testing.assert_array_equal(restored, [1.0, 2.0, 2.0, 2.0, 5.0])
+
+    def test_masked_average_ignores_missing_fill_values(self) -> None:
+        mask = np.array([True, True, False, False, True])
+        first = causal_masked_moving_average(
+            [1.0, 3.0, 0.0, 0.0, 5.0],
+            mask,
+            window_size=2,
+        )
+        second = causal_masked_moving_average(
+            [1.0, 3.0, 999.0, -999.0, 5.0],
+            mask,
+            window_size=2,
+        )
+
+        np.testing.assert_array_equal(first, second)
+        np.testing.assert_array_equal(first, [1.0, 2.0, 2.0, 2.0, 4.0])
+
+    def test_missing_baselines_require_initial_observation(self) -> None:
+        for baseline in (
+            lambda: last_observation_carried_forward([0.0, 1.0], [False, True]),
+            lambda: causal_masked_moving_average(
+                [0.0, 1.0],
+                [False, True],
+                window_size=2,
+            ),
+        ):
+            with self.assertRaisesRegex(ValueError, "first sample"):
+                baseline()
 
 
 if __name__ == "__main__":
