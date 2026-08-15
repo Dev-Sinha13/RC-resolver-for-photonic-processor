@@ -12,5 +12,8 @@ dependencies = [
     "numpy>=1.26",
 ]
 
+[project.scripts]
+rc-photonics-baselines = "rc_photonics.experiments_cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
