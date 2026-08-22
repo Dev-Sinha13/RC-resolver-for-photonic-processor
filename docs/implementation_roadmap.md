@@ -15,8 +15,12 @@ src/rc_photonics/
 ├── experiments.py         fixed baseline benchmarks
 ├── readout.py             shared ridge readout
 ├── esn.py                 digital echo-state network
+├── torch_esn.py           optional differentiable PyTorch ESN backend
 ├── model_evaluation.py    common reservoir fitting and selection
 ├── photonic_delay.py      virtual-node photonic delay reservoir
+├── optical_channel.py     OOK transmitter, SSFM fibre, and direct detector
+├── optical_experiment.py  causal FFE/ESN/photonic BER comparison
+├── optical_cli.py         configurable optical experiment and result files
 ├── hardware.py            simulated physical impairments
 ├── sensor_data.py         UCI Air Quality loading and preprocessing
 ├── reporting.py           Markdown, CSV, confidence intervals, and SVG
@@ -42,10 +46,17 @@ the temporal representation produced by the ESN or delay loop.
   intercept and shape/finite-value validation.
 - **Digital ESN:** seeded sparse recurrent matrix, spectral-radius scaling,
   leaky updates, state reset, washout, and causal collection.
+- **PyTorch ESN backend:** exact initialization from the NumPy reference,
+  non-trainable registered reservoir buffers, differentiable input execution,
+  closed-form ridge readout, NumPy evaluation adapter, and CPU/GPU device
+  support.
 - **Common evaluation:** validation-only selection for Gaussian, impulse,
   gap, external-sensor, and hardware-robustness experiments.
 - **Photonic delay reservoir:** deterministic input mask, delayed feedback,
   time-multiplexed virtual nodes, leaky coupling, and `sin²` nonlinearity.
+- **Optical communications:** seeded OOK generation, bandwidth-limited
+  transmitter and receiver, attenuation, chromatic dispersion, Kerr
+  nonlinearity, detector noise, timing jitter, BER, and causal equalization.
 - **Hardware robustness:** independently controllable internal noise,
   attenuation, quantization, drift, and timing jitter.
 - **Real sensor data:** official UCI Air Quality download, missing-marker

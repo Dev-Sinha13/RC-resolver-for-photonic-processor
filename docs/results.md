@@ -1,8 +1,66 @@
-# V1 benchmark results
+# Project benchmark results
 
-These are deterministic results from the fixed 6,000-sample Mackey–Glass
-protocol. Lower NMSE is better. They are engineering verification results from
-one seed, not confidence intervals or claims about physical hardware.
+These are deterministic engineering-verification results, not confidence
+intervals or claims about physical hardware. The signal-restoration tables use
+the fixed 6,000-sample Mackey–Glass protocol; the optical section uses its own
+independent-bit communication protocol. Lower NMSE and BER are better.
+
+## Optical OOK equalization
+
+This separate communication experiment generated independent seeded OOK
+bitstreams and propagated them at 10 Gbaud through 25 km of simulated fibre.
+The channel included 0.2 dB/km attenuation, 16.7 ps/(nm·km) chromatic
+dispersion, 1.3 (W·km)⁻¹ Kerr nonlinearity, 7.5 GHz transmitter and receiver
+bandwidth, 18 dB detector SNR, and 0.02 UI sampling jitter. A 32-step symmetric
+split-step Fourier solver operated at eight samples per symbol.
+
+Training, validation, and test contained 4,000, 2,000, and 4,000 independently
+generated bits. After the fixed washout and one-symbol causal receiver latency,
+3,800 test decisions remained. Thresholds were fitted on validation data only.
+
+| Receiver | Test BER | Bit errors | Test NMSE |
+| --- | ---: | ---: | ---: |
+| No temporal equalization | 0.033684 | 128 | 0.233769 |
+| 17-tap FFE | **0.000263** | **1** | 0.059293 |
+| Digital ESN | **0.000263** | **1** | **0.028519** |
+| Photonic delay reservoir | 0.008684 | 33 | 0.144666 |
+
+The photonic delay reservoir removed 95 of the raw receiver's 128 bit errors,
+a 74.2% BER reduction. It remained behind the linear FFE and digital ESN, so
+the experiment supports feasibility but not superiority. The FFE's especially
+strong BER also shows that this fixed link is dominated by impairments that a
+short linear-memory receiver can largely reverse. More nonlinear regimes,
+repeated seeds, parameter selection performed strictly on validation, and
+comparison with measured waveforms are required before making broader claims.
+
+The full run used seed `2026` and completed in 58.14 seconds on the development
+CPU. The raw receiver includes a training-fitted scalar amplitude calibration
+and validation-fitted threshold, but no temporal taps. Generated CSV and SVG
+files are deliberately ignored by Git and can be reproduced with:
+
+```powershell
+.\.venv\Scripts\rc-photonics-optical.exe --seed 2026
+```
+
+## PyTorch backend verification
+
+The optional PyTorch ESN uses the exact seeded matrices from the NumPy
+reference and produced identical six-decimal NMSE values and candidate choices
+for every Gaussian, impulse, and missing-gap condition below. Focused tests
+also verified state parity, causal behavior, reset behavior, input gradients,
+registered non-trainable buffers, and agreement between the NumPy and PyTorch
+closed-form ridge readouts.
+
+On the development CPU, the complete benchmark took 119.532 seconds with
+PyTorch 2.13.0 CPU and 54.525 seconds with NumPy. This small sequential workload
+therefore does not benefit from PyTorch on CPU. The backend is intended for
+future batched optical waveforms, GPU execution, and differentiable
+hardware-aware experiments rather than as a claim of immediate acceleration.
+
+A focused 6,000-sample, 100-node state-generation benchmark measured median
+times of 0.489471 seconds for NumPy and 1.136686 seconds for PyTorch CPU, a
+2.322× ratio. The maximum absolute difference between the two state matrices
+was `5.551e-16`, which is at floating-point rounding scale.
 
 ## Gaussian denoising
 

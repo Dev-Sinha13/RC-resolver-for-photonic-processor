@@ -43,3 +43,26 @@ jobs:
         run: >-
           python -c "from rc_photonics import EchoStateNetwork,
           PhotonicDelayReservoir, RidgeReadout; print('reservoir APIs import')"
+
+      - name: Smoke-test optical link and equalizers
+        run: rc-photonics-optical --quick --output results/optical-ci
+
+  pytorch-backend:
+    name: PyTorch backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package with optional PyTorch support
+        run: python -m pip install -e ".[torch]"
+
+      - name: Run PyTorch backend tests
+        run: python -m unittest tests.test_torch_esn -v

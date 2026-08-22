@@ -149,16 +149,18 @@ def fit_reservoir_restorer(
     return ReservoirRestorer(reservoir=reservoir, readout=readout)
 
 
+_DEFAULT_ESN_SETTINGS = (
+    (50, 0.7, 0.3, 0.5),
+    (50, 0.9, 0.5, 1.0),
+    (100, 0.7, 0.3, 1.0),
+    (100, 0.95, 0.2, 0.5),
+)
+
+
 def default_esn_candidates() -> tuple[ReservoirCandidate, ...]:
     """Return a deliberately small, reproducible ESN search space."""
-    settings = (
-        (50, 0.7, 0.3, 0.5),
-        (50, 0.9, 0.5, 1.0),
-        (100, 0.7, 0.3, 1.0),
-        (100, 0.95, 0.2, 0.5),
-    )
     candidates: list[ReservoirCandidate] = []
-    for n_nodes, radius, leak, input_scale in settings:
+    for n_nodes, radius, leak, input_scale in _DEFAULT_ESN_SETTINGS:
         config = ESNConfig(
             n_nodes=n_nodes,
             spectral_radius=radius,
@@ -174,6 +176,32 @@ def default_esn_candidates() -> tuple[ReservoirCandidate, ...]:
             ReservoirCandidate(
                 name=name,
                 factory=lambda config=config: EchoStateNetwork(config),
+            )
+        )
+    return tuple(candidates)
+
+
+def default_torch_esn_candidates() -> tuple[ReservoirCandidate, ...]:
+    """Return the same ESN search space using the optional PyTorch backend."""
+    from rc_photonics.torch_esn import TorchESNAdapter
+
+    candidates: list[ReservoirCandidate] = []
+    for n_nodes, radius, leak, input_scale in _DEFAULT_ESN_SETTINGS:
+        config = ESNConfig(
+            n_nodes=n_nodes,
+            spectral_radius=radius,
+            leak_rate=leak,
+            input_scaling=input_scale,
+            seed=42,
+        )
+        name = (
+            f"torch_esn_n{n_nodes}_rho{radius:g}_leak{leak:g}"
+            f"_in{input_scale:g}"
+        )
+        candidates.append(
+            ReservoirCandidate(
+                name=name,
+                factory=lambda config=config: TorchESNAdapter(config),
             )
         )
     return tuple(candidates)

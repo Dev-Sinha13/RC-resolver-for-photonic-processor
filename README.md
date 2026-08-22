@@ -14,6 +14,9 @@ protocol:
 5. A digital echo-state network (ESN)
 6. A simulated time-multiplexed photonic delay reservoir
 
+The digital ESN is available through both a lightweight NumPy reference and an
+optional differentiable PyTorch backend.
+
 The result is both a working signal-restoration package and an experimental
 framework for discovering where photonic reservoir computing helps, where it
 fails, and which simulated hardware imperfections matter most.
@@ -32,6 +35,7 @@ fails, and which simulated hardware imperfections matter most.
 - [Why photonic computing](#why-photonic-computing)
 - [End-to-end system](#end-to-end-system)
 - [The science and mathematics](#the-science-and-mathematics)
+- [Optional PyTorch backend](#optional-pytorch-backend)
 - [Experimental design](#experimental-design)
 - [Final results](#final-results)
 - [Photonic robustness](#photonic-robustness)
@@ -196,6 +200,27 @@ The fixed search contains four 50- or 100-node ESN candidates. Most synthetic
 experiments selected the 100-node configuration with spectral radius `0.95`,
 leak rate `0.2`, and input scaling `0.5`.
 
+## Optional PyTorch backend
+
+The PyTorch ESN is initialized from exactly the same seeded matrices as the
+NumPy reference. Its input matrix, recurrent matrix, and bias are registered
+as non-trainable buffers, preserving reservoir computing's fixed-dynamics
+design while allowing the model to move between CPU and GPU.
+
+The forward pass remains differentiable with respect to its inputs, making the
+backend suitable for future differentiable optical-channel and hardware-aware
+experiments. A closed-form PyTorch ridge readout and a NumPy-compatible adapter
+are included.
+
+Across the complete Gaussian, impulse, and gap benchmarks, PyTorch reproduced
+the NumPy ESN's NMSE values and selected configurations to the displayed
+precision. On the development CPU, the complete PyTorch benchmark took
+119.532 seconds versus 54.525 seconds for NumPy. The current small sequential
+workload is therefore faster in NumPy; PyTorch is provided for batching, GPU
+execution, and differentiable future work rather than immediate CPU speed.
+For the selected 100-node model, the maximum NumPy/PyTorch state difference
+over 6,000 samples was only `5.551e-16`.
+
 ### Photonic delay reservoir
 
 The photonic model applies a deterministic input mask, delayed feedback, leaky
@@ -209,6 +234,28 @@ The `sin²` response approximates the intensity transfer behavior of a
 Mach–Zehnder-style modulator. Previous round-trip states provide delayed
 feedback, while sequential samples of the loop behave as 50 or 100 virtual
 nodes.
+
+### Optical fibre channel and symbol recovery
+
+The optical-communications workflow generates a seeded OOK bitstream, shapes
+it with finite transmitter bandwidth, and propagates the complex optical field
+through standard single-mode fibre with a symmetric split-step Fourier method.
+Each small propagation step alternates:
+
+- a frequency-domain chromatic-dispersion update;
+- an attenuation update; and
+- a time-domain Kerr nonlinear phase update.
+
+The receiver applies finite electrical bandwidth, direct detection, additive
+detector noise, and seeded sampling jitter. The complete oversampled detector
+waveform—not just one sample per bit—drives both reservoirs. A ridge readout
+then recovers the transmitted symbol after a fixed one-symbol causal latency.
+
+This is a physically motivated communication-channel simulator, not a
+device-calibrated replacement for laboratory measurements. Guard symbols
+mitigate FFT wraparound, and the unit tests separately verify ideal-link BER,
+attenuation, dispersion energy conservation, Kerr intensity conservation,
+determinism, and causal feature construction.
 
 ### Shared ridge readout
 
@@ -264,6 +311,26 @@ lagged autoregression. These controls prevent a complex model from receiving
 credit for a task that a simple method solves better.
 
 ## Final results
+
+### Optical OOK equalization
+
+The default optical experiment uses independent training, validation, and test
+bitstreams at 10 Gbaud over 25 km of fibre. It reports bit-error rate (BER) as
+the primary communication metric and NMSE as a secondary continuous-output
+diagnostic.
+
+| Receiver | Test BER | Bit errors / 3,800 | Test NMSE |
+| --- | ---: | ---: | ---: |
+| No temporal equalization | 0.033684 | 128 | 0.233769 |
+| 17-tap FFE | **0.000263** | **1** | 0.059293 |
+| Digital ESN | **0.000263** | **1** | **0.028519** |
+| Photonic delay reservoir | 0.008684 | 33 | 0.144666 |
+
+The photonic reservoir reduced BER by 74.2% relative to the calibrated raw
+receiver, but did not beat the FFE or ESN. This is a useful positive result
+without overstating the simulated photonic architecture. See
+[the complete optical results](docs/results.md) for fixed parameters and
+interpretation.
 
 ### Gaussian denoising
 
@@ -361,6 +428,8 @@ error on this dataset, indicating weaker generalization.
 ## Installation
 
 Python 3.11 or 3.12 is recommended. NumPy is the only runtime dependency.
+PyTorch support is optional because its CPU wheel is substantially larger than
+the base project.
 
 ### Windows PowerShell
 
@@ -370,6 +439,12 @@ cd RC-resolver-for-photonic-processor
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Install the optional PyTorch backend with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[torch]"
 ```
 
 ### macOS or Linux
@@ -382,6 +457,12 @@ python3 -m venv .venv
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
+For optional PyTorch support:
+
+```bash
+.venv/bin/python -m pip install -e ".[torch]"
+```
+
 ## Running the project
 
 After installation, run:
@@ -390,10 +471,13 @@ After installation, run:
 | --- | --- | --- |
 | `rc-photonics-baselines` | Classical Gaussian and gap baselines | Seconds |
 | `rc-photonics-esn` | Full ESN Gaussian, impulse, and gap benchmark | Seconds |
+| `rc-photonics-torch-esn` | Same ESN benchmark through PyTorch | About two minutes on the tested CPU |
 | `rc-photonics-photonic` | Full photonic benchmark | Several minutes |
 | `rc-photonics-robustness` | Photonic impairment comparison | Seconds |
 | `rc-photonics-sensor` | Download and test UCI sensor data | Seconds |
 | `rc-photonics-figures` | Recompute all results and write CSV/SVG files | Several minutes |
+| `rc-photonics-optical --quick` | Fast OOK/fibre/equalizer smoke benchmark | Seconds |
+| `rc-photonics-optical` | Full split-step OOK equalization benchmark | About one minute |
 
 On Windows, the commands are located under `.venv\Scripts\` and may have an
 `.exe` suffix. Equivalent source-checkout wrappers are available in
@@ -416,6 +500,17 @@ To use an existing file or another included sensor column:
 
 Generated raw data and `results/` outputs are intentionally ignored by Git.
 
+For the fastest optical test:
+
+```powershell
+.\.venv\Scripts\rc-photonics-optical.exe --quick
+```
+
+The command writes `equalizer_scores.csv` and `recovered_symbols.svg`. Use the
+arguments shown by `--help` to change fibre length, optical power, bandwidth,
+detector SNR, timing jitter, or receiver latency without downloading a
+dataset—the bitstreams are generated locally from deterministic seeds.
+
 ## Repository structure
 
 ```text
@@ -437,13 +532,17 @@ RC-resolver-for-photonic-processor/
 │   ├── autoregression.py           linear temporal baselines
 │   ├── readout.py                  shared ridge output layer
 │   ├── esn.py                      digital echo-state network
+│   ├── torch_esn.py                optional PyTorch ESN and ridge readout
 │   ├── photonic_delay.py           virtual-node delay reservoir
+│   ├── optical_channel.py          OOK transmitter, fibre, and receiver
+│   ├── optical_experiment.py       causal BER comparison pipeline
+│   ├── optical_cli.py              optical command and SVG/CSV output
 │   ├── hardware.py                 simulated non-idealities
 │   ├── model_evaluation.py         training, selection, and evaluation
 │   ├── sensor_data.py              UCI loading and preprocessing
 │   ├── reporting.py                Markdown, CSV, confidence intervals, SVG
 │   └── reservoir_cli.py            executable workflows
-└── tests/                           74 deterministic unit tests
+└── tests/                           92 deterministic unit tests
 ```
 
 ## Testing and reproducibility
@@ -454,7 +553,7 @@ Run all tests with:
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-The 74-test suite checks:
+The 92-test suite checks:
 
 - deterministic seeded behavior;
 - causal behavior under changed future inputs;
@@ -462,6 +561,8 @@ The 74-test suite checks:
 - chronological partitioning;
 - input validation and non-mutation;
 - ESN spectral-radius scaling and reset behavior;
+- NumPy/PyTorch state and ridge-readout parity;
+- PyTorch gradients, registered buffers, reset, and causality;
 - photonic state bounds and virtual-node behavior;
 - zero-impairment equivalence;
 - hardware impairment reproducibility;
@@ -471,6 +572,8 @@ The 74-test suite checks:
 
 GitHub Actions performs editable installation, the full unit suite, the
 baseline command, and reservoir API import checks on Python 3.11 and 3.12.
+An additional Python 3.12 job installs the optional PyTorch extra and runs its
+backend-specific tests.
 
 All checked-in benchmark values are deterministic single-seed results. The
 reporting module supports confidence intervals, but publication-grade claims
@@ -482,6 +585,9 @@ V1 is a complete software research prototype, not a finished physical
 photonic processor. Important limitations are:
 
 - The photonic model is phenomenological rather than device calibrated.
+- The optical channel uses scalar-envelope propagation and direct detection;
+  it does not yet model polarization, laser phase noise, or a calibrated
+  transmitter/receiver component chain.
 - The benchmark tables report deterministic single-seed runs.
 - Mackey–Glass strongly favors autoregression during missing intervals.
 - Only one real sensor sequence has been evaluated.
@@ -515,6 +621,6 @@ UCI Air Quality dataset citation.
 
 ## Project status
 
-The implementation is version `0.2.0`. The complete V1 research prototype,
+The implementation is version `0.4.0`. The complete research prototype,
 tests, configurations, scripts, results, and documentation are present in this
 repository.

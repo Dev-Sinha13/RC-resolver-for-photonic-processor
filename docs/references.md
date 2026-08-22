@@ -15,10 +15,25 @@ single-node delay-reservoir idea used to emulate many virtual nodes in time.
   [Article](https://www.nature.com/articles/ncomms1476)
 - Y. Paquot et al., “Optoelectronic Reservoir Computing,” *Scientific Reports*
   2, 287 (2012). [Article](https://www.nature.com/articles/srep00287)
+- A. Argyris et al., “Photonic machine learning implementation for signal
+  recovery in optical communications,” *Scientific Reports* 8, 8487 (2018).
+  [Article](https://www.nature.com/articles/s41598-018-26927-y)
+- R. Van Assche et al., “Real-time optical signal equalization with a
+  silicon photonic spatially distributed reservoir computer,” *Nature
+  Photonics* (2026).
+  [Article](https://www.nature.com/articles/s41566-026-01968-2)
 - I. B. Yildiz, H. Jaeger, and S. J. Kiebel, “Re-visiting the echo state
   property,” *Neural Networks* 35, 1–9 (2012). This paper is a useful warning
   that spectral-radius heuristics alone do not prove the echo-state property.
   DOI: [10.1016/j.neunet.2012.07.005](https://doi.org/10.1016/j.neunet.2012.07.005)
+
+The optical-fibre implementation uses the standard split-step Fourier method
+for the nonlinear Schrödinger propagation model:
+
+- O. V. Sinkin et al., “Optimization of the Split-Step Fourier Method in
+  Modeling Optical-Fiber Communications Systems,” *Journal of Lightwave
+  Technology* 21, 61–68 (2003).
+  DOI: [10.1109/JLT.2003.808628](https://doi.org/10.1109/JLT.2003.808628)
 
 The real-data experiment uses:
 

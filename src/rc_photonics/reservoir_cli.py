@@ -15,6 +15,7 @@ from rc_photonics.model_evaluation import (
     ReservoirCandidate,
     default_esn_candidates,
     default_photonic_candidates,
+    default_torch_esn_candidates,
     run_photonic_robustness_experiment,
     run_reservoir_gap_experiment,
     run_reservoir_gaussian_experiment,
@@ -99,6 +100,10 @@ def _print_model_benchmarks(
 
 def esn_main() -> None:
     _print_model_benchmarks("ESN", default_esn_candidates())
+
+
+def torch_esn_main() -> None:
+    _print_model_benchmarks("PyTorch ESN", default_torch_esn_candidates())
 
 
 def photonic_main() -> None:

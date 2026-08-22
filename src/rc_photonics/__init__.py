@@ -42,6 +42,7 @@ from rc_photonics.model_evaluation import (
     RobustnessResult,
     default_esn_candidates,
     default_photonic_candidates,
+    default_torch_esn_candidates,
     fit_reservoir_restorer,
     make_reservoir_inputs,
     run_photonic_robustness_experiment,
@@ -53,6 +54,21 @@ from rc_photonics.model_evaluation import (
 from rc_photonics.photonic_delay import (
     PhotonicDelayConfig,
     PhotonicDelayReservoir,
+)
+from rc_photonics.optical_channel import (
+    OpticalLinkConfig,
+    OpticalTransmission,
+    bit_error_rate,
+    generate_ook_bits,
+    hard_decisions,
+    select_binary_threshold,
+    simulate_ook_link,
+)
+from rc_photonics.optical_experiment import (
+    EqualizerScore,
+    OpticalEqualizationResult,
+    causal_tap_matrix,
+    run_optical_equalization_experiment,
 )
 from rc_photonics.readout import RidgeReadout, fit_ridge_readout
 from rc_photonics.sensor_data import (
@@ -78,6 +94,10 @@ __all__ = [
     "MissingGapResult",
     "PhotonicDelayConfig",
     "PhotonicDelayReservoir",
+    "OpticalEqualizationResult",
+    "OpticalLinkConfig",
+    "OpticalTransmission",
+    "EqualizerScore",
     "PreparedSensorData",
     "ReservoirCandidate",
     "ReservoirGapResult",
@@ -92,14 +112,18 @@ __all__ = [
     "causal_median_filter",
     "causal_moving_average",
     "chronological_split",
+    "causal_tap_matrix",
     "default_esn_candidates",
     "default_photonic_candidates",
+    "default_torch_esn_candidates",
     "download_uci_air_quality",
     "fit_autoregressive_ridge",
     "fit_current_sample_ridge",
     "fit_reservoir_restorer",
     "fit_ridge_readout",
     "generate_mackey_glass",
+    "generate_ook_bits",
+    "hard_decisions",
     "identity_restoration",
     "last_observation_carried_forward",
     "load_uci_air_quality",
@@ -107,6 +131,7 @@ __all__ = [
     "mask_interval",
     "mean_squared_error",
     "normalized_mean_squared_error",
+    "bit_error_rate",
     "prepare_sensor_series",
     "run_gaussian_baseline_experiment",
     "run_impulse_baseline_experiment",
@@ -116,4 +141,7 @@ __all__ = [
     "run_reservoir_gaussian_experiment",
     "run_reservoir_impulse_experiment",
     "run_reservoir_on_split",
+    "run_optical_equalization_experiment",
+    "select_binary_threshold",
+    "simulate_ook_link",
 ]

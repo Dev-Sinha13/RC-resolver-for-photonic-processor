@@ -90,6 +90,10 @@ class EchoStateNetwork:
         return self._recurrent_weights.copy()
 
     @property
+    def bias(self) -> NDArray[np.float64]:
+        return self._bias.copy()
+
+    @property
     def spectral_radius(self) -> float:
         return float(
             np.max(np.abs(np.linalg.eigvals(self._recurrent_weights)))

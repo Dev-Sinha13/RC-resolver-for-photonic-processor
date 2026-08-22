@@ -1,0 +1,29 @@
+[transmitter]
+modulation = "OOK"
+symbol_rate_gbaud = 10.0
+samples_per_symbol = 8
+launch_power_dbm = 10.0
+bandwidth_ghz = 7.5
+
+[fibre]
+length_km = 25.0
+attenuation_db_per_km = 0.2
+dispersion_ps_nm_km = 16.7
+nonlinear_coefficient_per_w_km = 1.3
+wavelength_nm = 1550.0
+ssfm_steps = 32
+
+[receiver]
+bandwidth_ghz = 7.5
+detector_snr_db = 18.0
+timing_jitter_std_ui = 0.02
+
+[experiment]
+train_bits = 4000
+validation_bits = 2000
+test_bits = 4000
+ffe_taps = 17
+decision_delay_symbols = 1
+washout = 200
+regularization = 0.001
+seed = 42

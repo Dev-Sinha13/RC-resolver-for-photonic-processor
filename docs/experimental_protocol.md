@@ -17,6 +17,11 @@ network, and simulated photonic delay reservoir.
 The real-sensor experiment applies the same 60/20/20 chronological split and
 computes standardization statistics from its training partition only.
 
+The optical experiment instead generates independent seeded OOK bitstreams for
+training, validation, and test. It normalizes the oversampled detector waveform
+using training statistics only. A validation bitstream selects each decision
+threshold; the held-out test bitstream is evaluated once.
+
 ## Causality rule
 
 An estimate at time `t` may depend only on observations at or before `t`.
@@ -24,6 +29,13 @@ Autoregressive forecasts exclude the current observation. During a missing
 interval, predictions are fed back recursively without access to the clean
 target or future observations. Reservoir inputs contain two channels:
 `[corrupted value, observation mask]`.
+
+For optical equalization, the receiver has one detector-waveform input channel.
+The default decision has one symbol of fixed latency: receiver state at symbol
+`t + 1` estimates transmitted symbol `t`. Every equalizer uses current or past
+receiver samples only. The raw receiver buffers symbol `t`'s original sample
+for the same latency rather than incorrectly comparing symbol `t + 1` with
+symbol `t`.
 
 ## Tasks
 
@@ -49,6 +61,21 @@ target or future observations. Reservoir inputs contain two channels:
 - Reservoir readouts are trained on artificial missing positions so the target
   cannot be solved by simply copying observed values.
 - Error is averaged only over missing samples.
+
+### Optical OOK equalization
+
+- Modulation: on-off keying at 10 Gbaud and 8 samples per symbol.
+- Fibre: 25 km, 0.2 dB/km attenuation, 16.7 ps/(nm·km) dispersion, and
+  1.3 (W·km)⁻¹ Kerr coefficient.
+- Propagation: 32-step symmetric split-step Fourier method with guard symbols.
+- Receiver: direct detection, 7.5 GHz bandwidth, 18 dB detector SNR, and
+  0.02-unit-interval timing jitter.
+- Models: raw sampling, a causal 17-tap feed-forward equalizer, digital ESN,
+  and simulated photonic delay reservoir.
+- Primary metric: bit-error rate after selecting a scalar threshold on the
+  validation bitstream. NMSE is a secondary readout diagnostic.
+- Dataset size: no download is needed; the default seeded experiment generates
+  4,000 training, 2,000 validation, and 4,000 test bits in memory.
 
 ## Reservoir selection
 
